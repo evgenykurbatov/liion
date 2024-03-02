@@ -11,7 +11,7 @@ setup(
     author_email="evgeny.p.kurbatov@gmail.com",
     packages=['liion'],
     url='https://github.com/evgenykurbatov/liion',
-    description="Model for vertical column in accretion disk",
+    description="Model for a lithium-polymer battery",
     long_description=read("README.md"),
     long_description_content_type='text/markdown',
 )

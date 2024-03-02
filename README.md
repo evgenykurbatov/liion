@@ -31,3 +31,5 @@ The model is based on the paper of Berrueta et al. (2018).
 - <evgeny.p.kurbatov@gmail.com>
 
 **Maxim Buzdalov**
+
+- <mbuzdalov@gmail.com>
