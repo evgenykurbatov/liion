@@ -127,7 +127,7 @@ for k, i_const in enumerate(ii):
         bat = Bat133V()
         v, SOC = bat.i_to_v(t, i, T, 0.99)
         mask = SOC > 0.0
-        plt.plot(t[mask]/60, v[mask], label=f"T={T} K")
+        plt.plot(t[mask]/60, v[mask], label=f"T={T} C")
     plt.legend()
     plt.xlabel("t [min]")
     plt.ylabel("[V]")
