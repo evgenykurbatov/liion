@@ -3,7 +3,7 @@ import cma
 import numpy as np
 import matplotlib.pyplot as plt
 
-from math import sqrt, isnan
+from math import sqrt, isnan, exp
 
 sys.path.append("..")
 
@@ -19,20 +19,26 @@ class Context:
 
 # Init the physical part of the decoder
 the_decoder = VarDecoder()
+
 # Individual-dependent parts
-the_decoder.add_decoding_setter("C",           0.1,  1.0, lambda ctx: ctx.b)
+the_decoder.add_decoding_setter("C",           0.1, 10.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("eta_c_0",    0.85,  1.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("eta_c_i",    -0.1,  0.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("K_dif_elec",  0.0, 1e-4, lambda ctx: ctx.b)
-the_decoder.add_decoding_setter("U_0_bat",     3.0,  5.0, lambda ctx: ctx.b)
+the_decoder.add_decoding_setter("U_0_bat",     2.5,  3.5, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("R_ohm_0",     0.0,  1.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("R_ohm_SOC",  -1.0,  0.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("E_A",         0.1,  1.0, lambda ctx: ctx.b)
-the_decoder.add_decoding_setter("n",           1.5,  2.5, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("A_k_00",    1e-30, 1e-7, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("K_dif_mem",   0.0,  1.0, lambda ctx: ctx.b)
 the_decoder.add_decoding_setter("A_int",      -200, +200, lambda ctx: ctx.b, 8)
+the_decoder.add_decoding_setter("x_a_0",       0.0,  1.0, lambda ctx: ctx.b)
+the_decoder.add_decoding_setter("x_a_SOC",     0.0,  1.0, lambda ctx: ctx.b)
+the_decoder.add_decoding_setter("x_c_0",       0.0,  1.0, lambda ctx: ctx.b)
+the_decoder.add_decoding_setter("x_c_SOC",    -1.0,  0.0, lambda ctx: ctx.b)
+
 # Individual-independent parts
+the_decoder.add_plain_setter("n",               2.0, lambda ctx: ctx.b)
 the_decoder.add_plain_setter("eta_c_T",         0.0, lambda ctx: ctx.b)
 the_decoder.add_plain_setter("b_dif_elec",      0.0, lambda ctx: ctx.b)
 the_decoder.add_plain_setter("T_0_dif_elec", -273.0, lambda ctx: ctx.b)
@@ -50,7 +56,7 @@ infty = 1e100
 plots = [Plot(filename) for filename in sys.argv[1:]]
 
 # Patching the decoder to have SOC_0
-the_decoder.add_decoding_setter("SOC_0", 0.9, 1.0, lambda ctx: ctx, len(plots))
+the_decoder.add_decoding_setter("SOC_0", 0.7, 1.0, lambda ctx: ctx, len(plots))
 
 # Perform the modelling
 def compute_curves(ind):
@@ -62,16 +68,38 @@ def compute_curves(ind):
         context.curves.append(v)
     return context
 
+# Validate the context for sanity
+def constraint_violation(ctx):
+    if ctx.b.R_ohm_0 + ctx.b.R_ohm_SOC < 1e-5:
+        return True
+    if ctx.b.x_a_0 + ctx.b.x_a_SOC > 1:
+        return True
+    if ctx.b.x_c_0 + ctx.b.x_c_SOC < 0:
+        return True
+    return False
+
+cached_weights = dict()
+
+# Generate weights, return cached values if there are some
+def generate_weights(length):
+    if length not in cached_weights:
+        weights = [exp(max(0, 3 - min(i, length - i - 1))) for i in range(length)]
+        sumw = sum(weights)
+        cached_weights[length] = [w / sumw for w in weights]
+    return cached_weights[length]
+
 # Measure the fitness
 def fitness(ind):
     context = compute_curves(ind)
-    if context.b.R_ohm_0 + context.b.R_ohm_SOC < 1e-5:
+    if constraint_violation(context):
         return infty
     result = 0.0
     for plot_idx in range(len(plots)):
         ref_v = plots[plot_idx].voltage
         mdl_v = context.curves[plot_idx]
-        result += sqrt(sum((ref_v[i] - mdl_v[i]) ** 2 for i in range(len(ref_v))) / len(ref_v))
+        length = len(ref_v)
+        weights = generate_weights(length)
+        result += sqrt(sum(weights[i] * ((ref_v[i] - mdl_v[i]) ** 2) for i in range(length)))
         if isnan(result):
             return infty
     return result

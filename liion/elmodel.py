@@ -59,6 +59,10 @@ class LiIon:
     b_dif_mem   = None  # deg(C)
     T_0_dif_mem = None  # deg(C)
 
+    x_a_0    = None
+    x_a_SOC  = None
+    x_c_0    = None
+    x_c_SOC  = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
