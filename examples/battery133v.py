@@ -20,6 +20,7 @@ class Bat133V(LiIon):
     # Default values, may be overloaded either with a constructor or by direct assignment
 
     C = 41.0  # Ah
+    n_cells = 36
 
     eta_c_0 = 0.9922
     eta_c_T = 2.08e-4  # deg(C)-1
@@ -46,9 +47,7 @@ class Bat133V(LiIon):
     T_0_dif_mem = -13.0  # deg(C)
 
     x_a_0 = 0.083
-    x_a_SOC = 0.917
-    x_c_0 = 1.0
-    x_c_SOC = -0.7
+    x_c_1 = 0.3
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

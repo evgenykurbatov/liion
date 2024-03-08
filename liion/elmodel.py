@@ -35,6 +35,8 @@ class LiIon:
 
     C = None
 
+    n_cells = None
+
     eta_c_0 = None
     eta_c_T = None  # deg(C)-1
     eta_c_i = None  # A-1
@@ -60,9 +62,7 @@ class LiIon:
     T_0_dif_mem = None  # deg(C)
 
     x_a_0    = None
-    x_a_SOC  = None
-    x_c_0    = None
-    x_c_SOC  = None
+    x_c_1    = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -107,7 +107,7 @@ class LiIon:
         self.SOC_sur = SOC_sur
 
         # Molar fractions
-        x_a, x_c = _xx(SOC_sur)
+        x_a, x_c = _xx(SOC_sur, self.x_a_0, self.x_c_1)
         self.x_a = x_a
         self.x_c = x_c
 
@@ -116,7 +116,7 @@ class LiIon:
         self.v_int = v_int
 
         # Equilibrium voltage
-        v_eq = _v_eq(T, x_a, x_c, v_int, self.U_0_bat)
+        v_eq = _v_eq(T, x_a, x_c, v_int, self.U_0_bat, self.n_cells)
         self.v_eq = v_eq
 
         # Ohmic phenomena
@@ -144,7 +144,7 @@ class LiIon:
         # Result
 
         # Voltage on the battery
-        v = v_eq + v_act + i*(R_ohm + R_dif_mem)
+        v = v_eq - v_act - i*(R_ohm + R_dif_mem)
 
         return v, SOC
 
@@ -162,12 +162,9 @@ def _SOC_sur(i, eta_c, R_dif_elec, SOC):
     return SOC - eta_c*i*R_dif_elec
 
 
-def _xx(SOC_sur):
-    # These coefficients are valid for a particular anode and cathode chemistry
-    # May be it's better to make them adjustable
-    # See Sec. 3.2 of the Paper
-    x_a = 0.083 + 0.917*SOC_sur
-    x_c = 1.0 - 0.7*SOC_sur
+def _xx(SOC_sur, x_a_0, x_c_1):
+    x_a = x_a_0 + (1 - x_a_0) * SOC_sur
+    x_c = x_c_1 + (1 - x_c_1) * (1 - SOC_sur)
     return x_a, x_c
 
 
@@ -182,21 +179,24 @@ def _v_int(x_a, x_c, A):
     return res
     """
 
+    # Faraday constant
+    F = 9.649e4    # C mol-1
+
     res_a = np.array([ A[k]*( (2*x_a-1)**(k+1) - 2*x_a*k*(1-x_a)/(2*x_a-1)**(1-k) )
                        for k in range(8) ]).sum(axis=0)
     res_c = np.array([ A[k]*( (2*x_c-1)**(k+1) - 2*x_c*k*(1-x_c)/(2*x_c-1)**(1-k) )
                        for k in range(8) ]).sum(axis=0)
 
-    return res_a + res_c
+    return (res_c - res_a) / F
 
 
-def _v_eq(T, x_a, x_c, v_int, U_0_bat):
+def _v_eq(T, x_a, x_c, v_int, U_0_bat, n_cells):
     # Universal gas constant
     R_td = 8.314   # J mol-1 K-1
     # Fermi constant
     F = 9.649e4    # C mol-1
 
-    return U_0_bat + R_td*(273+T)/F * log((1-x_c)*x_a/(x_c*(1-x_a))) + v_int
+    return U_0_bat + n_cells * R_td*(273+T)/F * log((1-x_c)*x_a/(x_c*(1-x_a))) + v_int
 
 
 def _R_ohm(T, SOC, R_ohm_0, R_ohm_T, R_ohm_SOC):
