@@ -1,7 +1,5 @@
-![](https://github.com/evgenykurbatov/liion/liion-small.png)
-
 <p align="center">
-  <img src="https://github.com/evgenykurbatov/liion/liion-small.png" width="150" title="LiIon">
+  <img src="https://github.com/evgenykurbatov/liion/blob/main/liion-small.png" title="LiIon">
 </p>
 
 # LiIon
