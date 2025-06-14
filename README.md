@@ -1,3 +1,9 @@
+![](https://github.com/evgenykurbatov/liion/liion-small.png)
+
+<p align="center">
+  <img src="https://github.com/evgenykurbatov/liion/liion-small.png" width="150" title="LiIon">
+</p>
+
 # LiIon
 
 
